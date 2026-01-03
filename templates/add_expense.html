@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Add Expense</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="form-card">
+<h2>Add Expense</h2>
+<form method="post">
+  <input type="date" name="date" required>
+  <select name="category">
+    <option>Food</option>
+    <option>Rent</option>
+    <option>Travel</option>
+    <option>Shopping</option>
+    <option>Entertainment</option>
+  </select>
+  <input type="number" name="amount" required placeholder="Amount">
+  <input type="text" name="note" placeholder="Note">
+  <button>Add</button>
+</form>
+<a href="/dashboard">Back</a>
+</div>
+
+
+</body>
+</html>

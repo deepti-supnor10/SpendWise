@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SpendWise Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h2>Welcome {{ user }}</h2>
+
+<div class="cards">
+  <div class="stat green">Total<br>₹ {{ total }}</div>
+  <div class="stat blue">Entries<br>{{ count }}</div>
+  <div class="stat purple">Average<br>₹ {{ average }}</div>
+</div>
+
+<a href="/add">Add Expense</a>
+<a href="/analytics">Analytics</a>
+<a href="/predict">Prediction</a>
+
+<form method="post" action="/reset">
+  <button style="background:red">Reset My Data</button>
+</form>
+
+<a href="/logout">Logout</a>
+
+
+</body>
+</html>

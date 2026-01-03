@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Analytics</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<h2>Category-wise Analysis</h2>
+<table align="center" border="1">
+<tr><th>Category</th><th>Total</th></tr>
+{% for k,v in data.items() %}
+<tr><td>{{ k }}</td><td>₹ {{ v }}</td></tr>
+{% endfor %}
+</table>
+<a href="/dashboard">Back</a>
+
+</body>
+</html>

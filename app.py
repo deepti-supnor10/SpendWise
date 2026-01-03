@@ -1,35 +1,152 @@
-from flask import Flask, render_template, request
-import pickle
-import numpy as np
+from flask import Flask, render_template, request, redirect, session
+import sqlite3
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from database import init_db, get_connection
 
 app = Flask(__name__)
+app.secret_key = "spendwise_secret"
 
-# Load the trained model
-try:
-    model = pickle.load(open('spend_model.pkl', 'rb'))
-except FileNotFoundError:
-    print("Error: spend_model.pkl not found. Run model_trainer.py first.")
+init_db()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# ---------- LOGIN ----------
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT OR IGNORE INTO users (email) VALUES (?)", (email,))
+        conn.commit()
+        conn.close()
 
-@app.route('/predict', methods=['POST'])
+        session["user"] = email
+        return redirect("/dashboard")
+
+    return render_template("login.html")
+
+
+# ---------- DASHBOARD ----------
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = get_connection()
+    df = pd.read_sql(
+        "SELECT * FROM expenses WHERE user_email = ?",
+        conn,
+        params=(session["user"],)
+    )
+    conn.close()
+
+    total = df["amount"].sum() if not df.empty else 0
+    count = len(df)
+    avg = round(total / count, 2) if count else 0
+
+    return render_template("dashboard.html",
+                           total=total,
+                           count=count,
+                           average=avg,
+                           user=session["user"])
+
+
+# ---------- ADD EXPENSE ----------
+@app.route("/add", methods=["GET", "POST"])
+def add_expense():
+    if "user" not in session:
+        return redirect("/")
+
+    if request.method == "POST":
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+        INSERT INTO expenses (user_email, date, category, amount, note)
+        VALUES (?, ?, ?, ?, ?)
+        """, (
+            session["user"],
+            request.form["date"],
+            request.form["category"],
+            float(request.form["amount"]),
+            request.form.get("note", "")
+        ))
+
+        conn.commit()
+        conn.close()
+        return redirect("/dashboard")
+
+    return render_template("add_expense.html")
+
+
+# ---------- ANALYTICS ----------
+@app.route("/analytics")
+def analytics():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = get_connection()
+    df = pd.read_sql(
+        "SELECT category, SUM(amount) as total FROM expenses WHERE user_email = ? GROUP BY category",
+        conn,
+        params=(session["user"],)
+    )
+    conn.close()
+
+    data = dict(zip(df["category"], df["total"])) if not df.empty else {}
+    return render_template("analytics.html", data=data)
+
+
+# ---------- PREDICTION ----------
+@app.route("/predict")
 def predict():
-    if request.method == 'POST':
-        try:
-            month = int(request.form['month'])
-            prev_spend = float(request.form['prev_spend'])
-            
-            # Predict using pipeline
-            features = np.array([[month, prev_spend]])
-            prediction = model.predict(features)[0]
-            
-            return render_template('index.html', 
-                                   prediction_text=f'Predicted Expense: ${prediction:.2f}',
-                                   scroll='result-section')
-        except Exception as e:
-            return render_template('index.html', prediction_text=f"Error: {str(e)}")
+    if "user" not in session:
+        return redirect("/")
+
+    conn = get_connection()
+    df = pd.read_sql(
+        "SELECT date, amount FROM expenses WHERE user_email = ? ORDER BY date",
+        conn,
+        params=(session["user"],)
+    )
+    conn.close()
+
+    if len(df) < 5:
+        prediction = "Not enough data"
+    else:
+        df["day"] = range(1, len(df) + 1)
+        X = df[["day"]]
+        y = df["amount"]
+
+        model = LinearRegression()
+        model.fit(X, y)
+
+        prediction = round(model.predict([[len(df) + 1]])[0], 2)
+
+    return render_template("predict.html", prediction=prediction)
+
+
+# ---------- RESET USER DASHBOARD ----------
+@app.route("/reset", methods=["POST"])
+def reset():
+    if "user" not in session:
+        return redirect("/")
+
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM expenses WHERE user_email = ?", (session["user"],))
+    conn.commit()
+    conn.close()
+
+    return redirect("/dashboard")
+
+
+# ---------- LOGOUT ----------
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
