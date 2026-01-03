@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpendWise | AI Finance Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SpendWise<span>.ai</span></h1>
+            <p>Smart Expense Prediction & Analysis</p>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Predict Next Expense</h3>
+                <form action="/predict" method="post">
+                    <label>Month Index (e.g., 37 for next month)</label>
+                    <input type="number" name="month" placeholder="37" required>
+                    
+                    <label>Previous Month Spend ($)</label>
+                    <input type="number" name="prev_spend" placeholder="1500" required>
+                    
+                    <button type="submit">Analyze Patterns</button>
+                </form>
+
+                {% if prediction_text %}
+                <div id="result-section" class="result">
+                    <h4>{{ prediction_text }}</h4>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card">
+                <h3>Spending Habits Analysis</h3>
+                <canvas id="spendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('spendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Sept', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'],
+                datasets: [{
+                    label: 'Monthly Spending ($)',
+                    data: [1450, 1600, 1550, 2300, 1400, 1500],
+                    backgroundColor: '#4e73df'
+                }]
+            },
+            options: { responsive: true }
+        });
+    </script>
+</body>
+</html>
